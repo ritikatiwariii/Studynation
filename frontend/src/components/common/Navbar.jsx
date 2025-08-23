@@ -1,5 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { AiOutlineMenu, AiOutlineShoppingCart } from "react-icons/ai";
+import {
+  AiOutlineMenu,
+  AiOutlineShoppingCart,
+  AiOutlineClose,
+} from "react-icons/ai";
 import { BsChevronDown } from "react-icons/bs";
 import { useSelector } from "react-redux";
 import { Link, matchPath, useLocation } from "react-router-dom";
@@ -10,7 +14,6 @@ import { apiConnector } from "../../service/apiconnector";
 import { categories } from "../../service/apis";
 import { ACCOUNT_TYPE } from "../../utils/constants";
 import ProfileDropdown from "../cors/Auth/ProfileDropdown";
-import useOnClickOutside from "../../hooks/useOnClickOutside";
 
 function Navbar() {
   const { token } = useSelector((state) => state.auth);
@@ -21,9 +24,8 @@ function Navbar() {
   const [subLinks, setSubLinks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileCatalogOpen, setMobileCatalogOpen] = useState(false);
   const mobileMenuRef = useRef(null);
-
-  useOnClickOutside(mobileMenuRef, () => setMobileMenuOpen(false));
 
   useEffect(() => {
     (async () => {
@@ -43,10 +45,6 @@ function Navbar() {
 
   const matchRoute = (route) => {
     return matchPath({ path: route }, location.pathname);
-  };
-
-  const isCatalogActive = () => {
-    return location.pathname.startsWith("/catalog");
   };
 
   return (
@@ -69,7 +67,7 @@ function Navbar() {
                   <>
                     <div
                       className={`group relative flex cursor-pointer items-center gap-1 ${
-                        isCatalogActive()
+                        matchRoute("/catalog/:catalogName")
                           ? "text-yellow-25"
                           : "text-richblack-25"
                       }`}
@@ -147,133 +145,160 @@ function Navbar() {
           {token !== null && <ProfileDropdown />}
         </div>
         <button
-          className="mr-4 md:hidden"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="mr-2 rounded p-2 transition md:hidden hover:bg-richblack-700"
+          aria-label="Toggle navigation menu"
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
         >
-          <AiOutlineMenu fontSize={24} fill="#AFB2BF" />
+          {mobileMenuOpen ? (
+            <AiOutlineClose fontSize={22} fill="#AFB2BF" />
+          ) : (
+            <AiOutlineMenu fontSize={22} fill="#AFB2BF" />
+          )}
         </button>
       </div>
-
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div
-          ref={mobileMenuRef}
-          className="md:hidden bg-richblack-800 border-t border-richblack-700"
-        >
-          <div className="flex flex-col w-11/12 max-w-maxContent mx-auto py-4">
-            {/* Mobile Navigation Links */}
-            <div className="flex flex-col space-y-4">
+        <div className="md:hidden">
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 z-[60] bg-richblack-900/70 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Panel */}
+          <div
+            ref={mobileMenuRef}
+            className="fixed left-0 top-0 z-[70] flex h-full w-[78%] max-w-xs flex-col gap-4 overflow-y-auto bg-richblack-800/95 px-5 pb-10 pt-6 shadow-2xl ring-1 ring-richblack-700 animate-slide-in-left"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <Link to="/" onClick={() => setMobileMenuOpen(false)}>
+                <img
+                  src={logo}
+                  alt="Logo"
+                  className="h-8 w-auto"
+                  loading="lazy"
+                />
+              </Link>
+              <button
+                aria-label="Close navigation menu"
+                className="rounded p-2 hover:bg-richblack-700"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <AiOutlineClose fontSize={20} fill="#AFB2BF" />
+              </button>
+            </div>
+            <ul className="flex flex-col gap-1 text-sm">
               {NavbarLinks.map((link, index) => (
-                <div key={index}>
+                <li key={index} className="">
                   {link.title === "Catalog" ? (
-                    <div
-                      className={`text-richblack-25 ${
-                        isCatalogActive() ? "text-yellow-25" : ""
-                      }`}
-                    >
-                      <p className="font-medium">{link.title}</p>
-                      {loading ? (
-                        <p className="text-sm text-richblack-300 ml-4 mt-2">
-                          Loading...
-                        </p>
-                      ) : subLinks && subLinks.length ? (
-                        <div className="ml-4 mt-2 space-y-2">
-                          {subLinks?.map((subLink, i) => (
-                            <Link
-                              to={`/catalog/${subLink.name
-                                .split(" ")
-                                .join("-")
-                                .toLowerCase()}`}
-                              className="block text-sm text-richblack-300 hover:text-yellow-25"
-                              key={i}
-                              onClick={() => setMobileMenuOpen(false)}
-                            >
-                              {subLink.name}
-                            </Link>
-                          ))}
+                    <div className="flex flex-col">
+                      <button
+                        onClick={() => setMobileCatalogOpen((p) => !p)}
+                        className={`flex w-full items-center justify-between rounded-md px-3 py-3 text-left font-medium transition ${
+                          matchRoute("/catalog/:catalogName")
+                            ? "text-yellow-25"
+                            : "text-richblack-25"
+                        } hover:bg-richblack-700 focus:outline-none`}
+                        aria-expanded={mobileCatalogOpen}
+                      >
+                        <span>{link.title}</span>
+                        <BsChevronDown
+                          className={`transition-transform ${
+                            mobileCatalogOpen ? "rotate-180" : "rotate-0"
+                          }`}
+                        />
+                      </button>
+                      {mobileCatalogOpen && (
+                        <div className="ml-2 flex flex-col gap-0.5 rounded-md bg-richblack-700/40 py-1">
+                          {loading ? (
+                            <p className="px-4 py-2 text-richblack-200">
+                              Loading...
+                            </p>
+                          ) : subLinks && subLinks.length ? (
+                            subLinks.map((subLink, i) => (
+                              <Link
+                                key={i}
+                                to={`/catalog/${subLink.name
+                                  .split(" ")
+                                  .join("-")
+                                  .toLowerCase()}`}
+                                className="rounded-md px-4 py-2 text-richblack-50 transition hover:bg-richblack-600"
+                                onClick={() => setMobileMenuOpen(false)}
+                              >
+                                {subLink.name}
+                              </Link>
+                            ))
+                          ) : (
+                            <p className="px-4 py-2 text-richblack-200">
+                              No Courses Found
+                            </p>
+                          )}
                         </div>
-                      ) : (
-                        <p className="text-sm text-richblack-300 ml-4 mt-2">
-                          No Courses Found
-                        </p>
                       )}
                     </div>
                   ) : (
                     <Link
                       to={link?.path}
+                      className={`block rounded-md px-3 py-3 font-medium transition ${
+                        matchRoute(link?.path)
+                          ? "text-yellow-25"
+                          : "text-richblack-25"
+                      } hover:bg-richblack-700`}
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <p
-                        className={`${
-                          matchRoute(link?.path)
-                            ? "text-yellow-25"
-                            : "text-richblack-25"
-                        } font-medium`}
-                      >
-                        {link.title}
-                      </p>
+                      {link.title}
                     </Link>
                   )}
-                </div>
+                </li>
               ))}
-            </div>
-
-            {/* Mobile Cart and Auth Links */}
-            <div className="mt-6 pt-4 border-t border-richblack-700 flex flex-col space-y-4">
-              {/* Dashboard Link for Logged In Users */}
-              {token && (
-                <Link
-                  to="/dashboard/my-profile"
-                  className="flex items-center gap-2"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 flex items-center justify-center">
-                    <span className="text-xs font-bold text-black">
-                      {user?.firstName?.charAt(0) || "U"}
-                    </span>
-                  </div>
-                  <span className="text-richblack-25 font-medium">
-                    Dashboard
-                  </span>
-                </Link>
-              )}
-
+            </ul>
+            <div className="mt-4 h-px w-full bg-richblack-700" />
+            <div className="flex flex-col gap-3">
               {user && user?.accountType !== ACCOUNT_TYPE.INSTRUCTOR && (
                 <Link
                   to="/dashboard/cart"
-                  className="flex items-center gap-2"
+                  className="relative flex items-center gap-2 rounded-md bg-richblack-700/40 px-3 py-2 text-richblack-25 hover:bg-richblack-700"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <AiOutlineShoppingCart className="text-xl text-richblack-100" />
-                  <span className="text-richblack-25">Cart</span>
+                  <AiOutlineShoppingCart className="text-xl" />
+                  <span>Cart</span>
                   {totalItems > 0 && (
-                    <span className="bg-richblack-600 text-yellow-100 text-xs font-bold px-2 py-1 rounded-full">
+                    <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-yellow-100 px-1 text-xs font-bold text-richblack-900">
                       {totalItems}
                     </span>
                   )}
                 </Link>
               )}
-
               {!token && (
-                <>
-                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                    <button className="w-full text-left rounded-[8px] border border-richblack-700 bg-richblack-800 px-[12px] py-[8px] text-richblack-100">
+                <div className="flex gap-3">
+                  <Link
+                    to="/login"
+                    className="flex-1"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <button className="w-full rounded-md border border-richblack-700 bg-richblack-800 px-4 py-2 text-sm font-medium text-richblack-100 transition hover:bg-richblack-700">
                       Log in
                     </button>
                   </Link>
-                  <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
-                    <button className="w-full text-left rounded-[8px] border border-richblack-700 bg-richblack-800 px-[12px] py-[8px] text-richblack-100">
+                  <Link
+                    to="/signup"
+                    className="flex-1"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <button className="w-full rounded-md bg-yellow-50 px-4 py-2 text-sm font-semibold text-richblack-900 transition hover:bg-yellow-100">
                       Sign up
                     </button>
                   </Link>
-                </>
-              )}
-
-              {token !== null && (
-                <div onClick={() => setMobileMenuOpen(false)}>
-                  <ProfileDropdown />
                 </div>
               )}
+              {token && (
+                <div className="flex items-center gap-3">
+                  <ProfileDropdown />
+                  {/* Extra space to keep layout balanced */}
+                </div>
+              )}
+            </div>
+            <div className="mt-auto pt-4 text-[11px] text-richblack-400">
+              <p>© {new Date().getFullYear()} StudyNation</p>
             </div>
           </div>
         </div>
